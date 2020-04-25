@@ -76,8 +76,32 @@ object StarProjectionForMap {
             } +
 
             fun(
+                    // These types are equivalent
+                    x0: Map<*, *>,
+                    x1: Map<out Any?, Any?>,
+                    x2: Map<in Nothing, Any?>,
+
+                    y1: Map<Any?, String>,
+                    y2: Map<Nothing, String>,
+                    y3: Map<String, String>
+            ) {
+                val x0x1: Map<*, *> = x1
+                val x1x0: Map<out Any?, Any?> = x0
+                val x0x2: Map<*, *> = x2
+                val x2x0: Map<out Any?, Any?> = x0
+
+                val x0y1: Map<*, *> = y1
+                val x0y2: Map<*, *> = y2
+                val x0y3: Map<*, *> = y3
+//                val y1x0: Map<Any?, String> = x0  // Compilation error
+//                val y2x0: Map<Nothing, String> = x0  // Compilation error
+//                val y3x0: Map<String, String> = x0  // Compilation error
+            } +
+
+            fun(
                     stringMap: Map<String, String>,
                     starMap: Map<*, String>,
+                    starStarMap: Map<*, *>,
                     fooMap: Map<Foo, String>,
                     barMap: Map<Bar, String>,
                     foo: Foo,
@@ -122,6 +146,16 @@ object StarProjectionForMap {
                     // but they are hierarchically related, so the type parameter
                     // of get is widened to Any?.
                     val res3 = starMap.get(42 as Any)
+                }
+
+                run {
+                    // There are no compilation errors as Map<*, *> is Map<out Any?, Any?>, so the
+                    // situation is similar to that of starMap above.
+
+                    val res1 = starStarMap.get("a")
+                    val res2 = starStarMap.get(Any())
+                    val res3 = starStarMap.get(42)
+                    val res4 = starStarMap.get(42 as Any)
                 }
 
                 run {
@@ -195,7 +229,13 @@ object StarProjectionForMap {
                 run {
                     val res5 = barMyMap.get(foo)
                 }
+            } +
+
+            fun(
+                    starStarMap: Map<*, *>
+            ) {
             }
+
 
     @JvmStatic
     fun main(args: Array<String>) {
