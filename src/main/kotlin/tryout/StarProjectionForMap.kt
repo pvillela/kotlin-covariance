@@ -1,7 +1,6 @@
 package tryout
 
-import tryout.StarProjectionForMap.get
-
+// See https://kotlinlang.org/docs/reference/generics.html#star-projections
 
 /**
  * Explores the star projection for Map and similar interfaces.
