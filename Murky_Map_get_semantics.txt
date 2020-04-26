@@ -1,0 +1,48 @@
+Map<*, *>.get not calling get method on concrete Map class
+==========================================================
+
+Map.get doesn't behave exactly as specified.  Here is an example:
+
+    class TrickyMap : Map<Int, Int> {
+
+        override fun get(key: Int): Int? {
+            val value = key * 10
+            return if (key in setOf(1, 2)) value
+            else null
+        }
+
+        override val entries: Set<Map.Entry<Int, Int>>
+            get() = TODO("Not yet implemented")
+        override val keys: Set<Int>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Int>
+            get() = TODO("Not yet implemented")
+        override fun containsKey(key: Int): Boolean =
+            TODO("Not yet implemented")
+        override fun containsValue(value: Int): Boolean =
+            TODO("Not yet implemented")
+        override fun isEmpty(): Boolean =
+            TODO("Not yet implemented")
+    }
+
+    fun main() {
+        val map: Map<*, *> = TrickyMap()
+        println(map[1])  // prints 10
+        println(map[3])  // prints null
+        println(map["a"])  // should throw a ClassCastException but prints null
+    }
+
+
+By tracing the code, it can seen that map[1], map[3], and map["a"] call the extension function 
+
+    @kotlin.internal.InlineOnly
+    public inline operator fun <@kotlin.internal.OnlyInputTypes K, V> Map<out K, V>.get(key: K): V? =
+        @Suppress("UNCHECKED_CAST") (this as Map<K, V>).get(key)
+
+in the file Maps.kt.  This function then delegates to the get method on the map object.
+
+For map[1] and map[3], the call ends up handled by TrickyMap.get.  For map["a"], however, the call is not delegated to TrickyMap.get but it mysteriously returns null.
+
+Question: What is the explanation for this behaviour? What function is handling the call m["a"] after delegation by the above extension function?

@@ -1,5 +1,7 @@
 package tryout
 
+import kotlin.reflect.full.allSupertypes
+
 // See https://kotlinlang.org/docs/reference/generics.html#star-projections
 
 /**
@@ -7,22 +9,77 @@ package tryout
  */
 object StarProjectionForMap {
 
+    fun Any.objectId() = System.identityHashCode(this)
+
     interface MyMap<K, out V> {
         operator fun get(key: K): V?
     }
 
     class MyMapImpl<K, out V>(vararg private val associations: Pair<K, V>) : MyMap<K, V> {
-        override fun get(key: K): V? =
-                associations.toList().findLast { (k, _) -> k == key }?.second
+        override fun get(key: K): V? {
+            println("Executed MyMapImpl.get: this=$this, objectId()=${this.objectId()}, key=$key")
+            return associations.toList().findLast { (k, _) -> k == key }?.second
+        }
     }
 
     // Similar to extension function for Map interface. When MyMap<S, V> is the target and K is the
     // type of key, S must be a subtype of K. In other words, K must be a supertype of S.
-    operator fun <K, V> MyMap<out K, V>.get(key: K): V? =
-            @Suppress("UNCHECKED_CAST") (this as MyMap<K, V>).get(key)
+    operator fun <K, V> MyMap<out K, V>.get(key: K): V? {
+        println("Executed MyMap's extension get: this=$this, objectId()=${this.objectId()}, key=$key")
+        val value = @Suppress("UNCHECKED_CAST") (this as MyMap<K, V>).get(key)
+        return value
+    }
+
+    // Shadowing Map's get extension function.
+    operator fun <K, V> Map<out K, V>.get(key: K): V? {
+        println("Executed this file's extension get: this=$this, objectId()=${this.objectId()}, key=$key")
+        val value = @Suppress("UNCHECKED_CAST") (this as Map<K, V>).get(key)
+        return value
+    }
+
+    /**
+     * Class intended to break Map<*, *> extension get function.
+     */
+    class TrickyMap : Map<Int, Int> {
+
+        override fun get(key: Int): Int? {
+            println("Executed TrickyMap.get for key=$key")
+            val value = key * 10
+            return if (key in setOf(1, 2)) value
+            else null
+        }
+
+        override val entries: Set<Map.Entry<Int, Int>>
+            get() = TODO("Not yet implemented")
+        override val keys: Set<Int>
+            get() = TODO("Not yet implemented")
+        override val size: Int
+            get() = TODO("Not yet implemented")
+        override val values: Collection<Int>
+            get() = TODO("Not yet implemented")
+        override fun containsKey(key: Int): Boolean =
+                TODO("Not yet implemented")
+        override fun containsValue(value: Int): Boolean =
+                TODO("Not yet implemented")
+        override fun isEmpty(): Boolean =
+                TODO("Not yet implemented")
+    }
+
+    /**
+     * Class to break MyMap<*, *> extension get function.
+     */
+    class TrickyMyMap : MyMap<Int, Int> {
+
+        override fun get(key: Int): Int? {
+            println("Executed TrickyMyMap.get for key=$key")
+            val value = key * 10
+            return if (key in setOf(1, 2)) value
+            else null
+        }
+    }
 
 
-    // Interfaces to demonstrate type matching with extension function
+    // Interfaces to demonstrate type matching with extension get function
     interface Foo
     interface Bar : Foo
 
@@ -229,20 +286,17 @@ object StarProjectionForMap {
                 run {
                     val res5 = barMyMap.get(foo)
                 }
-            } +
-
-            fun(
-                    starStarMap: Map<*, *>
-            ) {
             }
-
 
     @JvmStatic
     fun main(args: Array<String>) {
+
+        // MyMap examples
+
         val stringMyMap: MyMap<String, String> = MyMapImpl("a" to "1", "b" to "2")
         val starMyMap: MyMap<*, String> = stringMyMap
-        val foo: Foo = object : Foo { }
-        val bar: Bar = object : Bar { }
+        val foo: Foo = object : Foo {}
+        val bar: Bar = object : Bar {}
         val fooMyMap: MyMap<Foo, String> = MyMapImpl(foo to "foo")
         val barMyMap: MyMap<Bar, String> = MyMapImpl(bar to "bar")
 
@@ -273,10 +327,50 @@ object StarProjectionForMap {
                 println(res)
             }
         }
-        
+
         printAll("*** stringMyMap ***", stringMyMap)
         printAll("*** starMyMap ***", starMyMap)
         printAll("*** fooMyMap ***", fooMyMap)
         printAll("*** barMyMap ***", barMyMap)
+
+        // Map<*, *> breaking example that doesn't break
+        
+        run {
+            println("\n*** TrickyMap as Map<*, *> ***")
+            val map: Map<*, *> = TrickyMap()
+            println(map[1])
+            println(map[2])
+            println(map[3])
+            println(map["a"])
+        }
+        
+        run {
+            println("\n*** TrickyMap as Map<Int, Int> ***")
+            val map: Map<Int, Int> = TrickyMap()
+            println(map[1])
+            println(map[2])
+            println(map[3])
+            println(map["a"])
+        }
+
+        // MyMap<*, *> example that doesn't break
+        run {
+            println("\n*** MyMapImpl ***")
+            val starStarMyMap: MyMap<*, *> = MyMapImpl(1 to 10, 2 to 20)
+            println(starStarMyMap[1])
+            println(starStarMyMap[2])
+            println(starStarMyMap[3])
+            println(starStarMyMap["a"])
+        }
+
+        // MyMap<*, *> breaking example
+        run {
+            println("\n*** TrickyMyMap ***")
+            val starStarMyMap: MyMap<*, *> = TrickyMyMap()
+            println(starStarMyMap[1])
+            println(starStarMyMap[2])
+            println(starStarMyMap[3])
+            println(starStarMyMap["a"])
+        }
     }
 }
