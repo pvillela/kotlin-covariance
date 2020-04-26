@@ -30,7 +30,7 @@ object StarProjectionForMap {
         return value
     }
 
-    // Shadowing Map's get extension function.
+    // Shadowing Map's get extension function in Standard Library.
     operator fun <K, V> Map<out K, V>.get(key: K): V? {
         println("Executed this file's extension get: this=$this, objectId()=${this.objectId()}, key=$key")
         val value = @Suppress("UNCHECKED_CAST") (this as Map<K, V>).get(key)
@@ -333,7 +333,8 @@ object StarProjectionForMap {
         printAll("*** fooMyMap ***", fooMyMap)
         printAll("*** barMyMap ***", barMyMap)
 
-        // Map<*, *> breaking example that doesn't break
+        // Map<*, *> example intended to throw ClassCastException for map["a"] but it doesn't.
+        // See explanation here: https://discuss.kotlinlang.org/t/map-get-not-calling-get-method-on-concrete-map-class/17337/2?u=pvillela
         
         run {
             println("\n*** TrickyMap as Map<*, *> ***")
@@ -350,6 +351,9 @@ object StarProjectionForMap {
             println(map[1])
             println(map[2])
             println(map[3])
+
+            // Produces compilation error when Map's extension get function is not shadowed by
+            // implementation in this file.
             println(map["a"])
         }
 

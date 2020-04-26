@@ -143,4 +143,4 @@ object StarProjectionForFunction {
                 val res1: () -> Any? = { foo.apply("bar") }
                 val res2: () -> Any? = { foo.apply(TODO()) }
             }
-    }
+}
